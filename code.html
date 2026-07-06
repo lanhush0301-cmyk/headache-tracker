@@ -211,6 +211,36 @@
       border-radius: 28px;
     }
 
+    .calendar-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 7px 10px;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      border: 1px solid var(--line);
+    }
+
+    .legend-dot.mid { background: var(--yellow); }
+    .legend-dot.high { background: var(--red-soft); }
+
     .month-row {
       display: flex;
       justify-content: space-between;
@@ -497,6 +527,52 @@
       line-height: 1.75;
       color: #393543;
       font-weight: 650;
+    }
+
+    .home-medicine {
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .home-medicine-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .home-medicine-count {
+      font-size: 34px;
+      font-weight: 950;
+      line-height: 1;
+      color: var(--primary);
+    }
+
+    .limit-track {
+      height: 12px;
+      background: var(--soft);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .limit-fill {
+      height: 100%;
+      width: 0;
+      background: var(--primary);
+      border-radius: 999px;
+      transition: width 0.2s ease, background 0.2s ease;
+    }
+
+    .limit-fill.warning {
+      background: var(--red);
+    }
+
+    .home-medicine-note {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 750;
+      line-height: 1.55;
     }
 
     .med-dashboard {
@@ -870,6 +946,23 @@
         </div>
 
         <section class="section">
+          <div class="card home-medicine">
+            <div class="home-medicine-top">
+              <div>
+                <h3>本月用药</h3>
+                <div class="home-medicine-note" id="homeMedicineNote">按服药时间统计，超过 8 次会提醒。</div>
+              </div>
+              <div>
+                <span class="home-medicine-count" id="homeMedicineCount">0</span>
+                <span class="unit">/8次</span>
+              </div>
+            </div>
+            <div class="limit-track"><div class="limit-fill" id="homeMedicineFill"></div></div>
+            <button class="link" type="button" data-go="analysis">查看用药分析 ›</button>
+          </div>
+        </section>
+
+        <section class="section">
           <div class="card calendar">
             <div class="month-row">
               <div class="month-title" id="monthTitle">本月看板</div>
@@ -882,6 +975,11 @@
               <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
             </div>
             <div class="days" id="calendarDays"></div>
+            <div class="calendar-legend" aria-label="疼痛程度图例">
+              <span class="legend-item"><span class="legend-dot"></span>轻微 1-3</span>
+              <span class="legend-item"><span class="legend-dot mid"></span>中等 4-6</span>
+              <span class="legend-item"><span class="legend-dot high"></span>严重 7-10</span>
+            </div>
           </div>
         </section>
 
@@ -1218,6 +1316,7 @@
     let activeFilter = "all";
     let visibleMonth = new Date();
     let editingMedications = [];
+    let activeEditingRecord = null;
 
     const $ = (selector, root = document) => root.querySelector(selector);
     const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -1300,7 +1399,7 @@
           .filter((item) => item && item.medicine && item.medicine !== "没吃")
           .map((item) => ({
             medicine: item.medicine,
-            time: item.time || record.startTime,
+            time: validDateValue(item.time) || record.startTime,
             pills: Number(item.pills) || 1,
             note: item.note || ""
           }));
@@ -1316,9 +1415,36 @@
       return [];
     }
 
+    function validDateValue(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "" : value;
+    }
+
     function monthMedicationEvents(monthDate = new Date()) {
       return records.flatMap((record) => recordMedications(record).map((dose) => ({ ...dose, recordId: record.id })))
         .filter((dose) => sameMonth(dose.time, monthDate));
+    }
+
+    function medicineStatsForMonth(monthDate = new Date()) {
+      const events = monthMedicationEvents(monthDate);
+      const doseCount = events.length;
+      const pillCount = events.reduce((sum, dose) => sum + Number(dose.pills || 0), 0);
+      const lastDose = [...events].sort((a, b) => new Date(b.time) - new Date(a.time))[0];
+      const byMedicine = Object.entries(events.reduce((acc, dose) => {
+        const key = dose.medicine || "其他";
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {})).sort((a, b) => b[1] - a[1]);
+      return { events, doseCount, pillCount, lastDose, byMedicine };
+    }
+
+    function escapeAttr(value = "") {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
     }
 
     function daysBetween(a, b) {
@@ -1385,6 +1511,7 @@
 
     function renderHome() {
       const currentMonthRecords = monthRecords(new Date());
+      const medicineStats = medicineStatsForMonth(new Date());
       const latest = sortedRecords()[0];
       const avg = currentMonthRecords.length
         ? currentMonthRecords.reduce((sum, item) => sum + Number(item.painLevel), 0) / currentMonthRecords.length
@@ -1394,6 +1521,12 @@
       $("#daysSince").textContent = latest ? daysBetween(new Date(), new Date(latest.startTime)) : "--";
       $("#severeCount").textContent = currentMonthRecords.filter((item) => item.painLevel >= 7).length;
       $("#avgPain").textContent = avg ? avg.toFixed(1) : "0";
+      $("#homeMedicineCount").textContent = medicineStats.doseCount;
+      $("#homeMedicineFill").style.width = `${Math.min(100, (medicineStats.doseCount / 8) * 100)}%`;
+      $("#homeMedicineFill").classList.toggle("warning", medicineStats.doseCount > 8);
+      $("#homeMedicineNote").textContent = medicineStats.doseCount > 8
+        ? `本月已超过 8 次，建议带记录就医确认。`
+        : `本月共 ${formatPills(medicineStats.pillCount)} 片，按服药时间统计。`;
 
       $("#heroTitle").textContent = latest ? `上次头疼是${relativeText(latest.startTime)}` : "今天感觉怎么样？";
       $("#heroText").textContent = latest
@@ -1522,31 +1655,23 @@
       const severe = list.filter((item) => item.painLevel >= 7).length;
       const causes = countItems(list, "causes");
       const symptoms = countItems(list, "symptoms");
-      const medicineEvents = monthMedicationEvents(new Date());
-      const medicineDoseCount = medicineEvents.length;
-      const medicinePillCount = medicineEvents.reduce((sum, dose) => sum + Number(dose.pills || 0), 0);
-      const lastMedicine = [...medicineEvents].sort((a, b) => new Date(b.time) - new Date(a.time))[0];
-      const medicines = Object.entries(medicineEvents.reduce((acc, dose) => {
-        const key = dose.medicine || "其他";
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {})).sort((a, b) => b[1] - a[1]);
+      const medicineStats = medicineStatsForMonth(new Date());
 
       $("#summaryText").textContent = list.length
-        ? `本月共记录 ${list.length} 个头疼周期，平均疼痛程度 ${avg} 分，其中重度头疼 ${severe} 次。最常见诱因是${causes[0]?.[0] || "暂不明显"}，伴随症状里${symptoms[0]?.[0] || "暂不明显"}出现最多。本月记录服药 ${medicineDoseCount} 次，共 ${formatPills(medicinePillCount)} 片。${latest ? `距离上次头疼已经过去 ${daysBetween(new Date(), new Date(latest.startTime))} 天。` : ""}`
+        ? `本月共记录 ${list.length} 个头疼周期，平均疼痛程度 ${avg} 分，其中重度头疼 ${severe} 次。最常见诱因是${causes[0]?.[0] || "暂不明显"}，伴随症状里${symptoms[0]?.[0] || "暂不明显"}出现最多。本月记录服药 ${medicineStats.doseCount} 次，共 ${formatPills(medicineStats.pillCount)} 片。${latest ? `距离上次头疼已经过去 ${daysBetween(new Date(), new Date(latest.startTime))} 天。` : ""}`
         : "本月还没有头疼记录。";
 
-      $("#medicineDoseCount").textContent = medicineDoseCount;
-      $("#medicinePillCount").textContent = formatPills(medicinePillCount);
-      $("#lastMedicineTime").textContent = lastMedicine ? `${new Date(lastMedicine.time).getMonth() + 1}/${new Date(lastMedicine.time).getDate()}` : "--";
-      $("#medicineWarning").classList.toggle("visible", medicineDoseCount > 8);
-      $("#medicineWarning").textContent = medicineDoseCount > 8
-        ? `本月已经记录 ${medicineDoseCount} 次止痛药使用，超过 8 次。建议把记录带给医生看一下，确认用药频率和头疼控制方案。`
+      $("#medicineDoseCount").textContent = medicineStats.doseCount;
+      $("#medicinePillCount").textContent = formatPills(medicineStats.pillCount);
+      $("#lastMedicineTime").textContent = medicineStats.lastDose ? `${new Date(medicineStats.lastDose.time).getMonth() + 1}/${new Date(medicineStats.lastDose.time).getDate()}` : "--";
+      $("#medicineWarning").classList.toggle("visible", medicineStats.doseCount > 8);
+      $("#medicineWarning").textContent = medicineStats.doseCount > 8
+        ? `本月已经记录 ${medicineStats.doseCount} 次止痛药使用，超过 8 次。建议把记录带给医生看一下，确认用药频率和头疼控制方案。`
         : "";
 
       renderBars("#causeBars", causes);
       renderBars("#symptomBars", symptoms);
-      renderBars("#medicineBars", medicines);
+      renderBars("#medicineBars", medicineStats.byMedicine);
     }
 
     function renderProfile() {
@@ -1671,7 +1796,7 @@
             <input data-med-field="time" type="datetime-local" value="${dose.time || toInputDateTime(new Date())}" />
             <input data-med-field="pills" type="number" min="0.25" step="0.25" inputmode="decimal" value="${dose.pills || 1}" placeholder="片数" />
           </div>
-          <input data-med-field="note" type="text" value="${dose.note || ""}" placeholder="备注：比如第二片、饭后、其他药名" />
+          <input data-med-field="note" type="text" value="${escapeAttr(dose.note || "")}" placeholder="备注：比如第二片、饭后、其他药名" />
         </div>
       `).join("");
       $$("[data-remove-dose]", root).forEach((button) => {
@@ -1689,9 +1814,14 @@
 
     function addMedicationDose(dose = null) {
       syncMedicationEditor();
+      const defaultTime = dose?.time
+        || (activeEditingRecord && !$("#endTime").value ? toInputDateTime(new Date()) : "")
+        || $("#endTime").value
+        || $("#startTime").value
+        || toInputDateTime(new Date());
       editingMedications.push(dose || {
         medicine: "EVE",
-        time: $("#startTime").value || toInputDateTime(new Date()),
+        time: defaultTime,
         pills: 1,
         note: ""
       });
@@ -1699,6 +1829,7 @@
     }
 
     function openDialog(record = null) {
+      activeEditingRecord = record;
       $("#dialogTitle").textContent = record ? "编辑头疼记录" : "记录一次头疼";
       $("#recordId").value = record?.id || "";
       $("#startTime").value = record?.startTime || toInputDateTime(new Date());
