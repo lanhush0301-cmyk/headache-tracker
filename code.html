@@ -499,6 +499,93 @@
       font-weight: 650;
     }
 
+    .med-dashboard {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .med-metric {
+      background: var(--soft);
+      border-radius: 20px;
+      padding: 14px;
+      min-height: 86px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .med-metric strong {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .med-metric span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .warning-card {
+      display: none;
+      background: var(--red-soft);
+      color: #8f1622;
+      border-radius: 22px;
+      padding: 16px;
+      font-weight: 850;
+      line-height: 1.55;
+    }
+
+    .warning-card.visible {
+      display: block;
+    }
+
+    .medication-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .medication-row {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .medication-row-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 900;
+      color: #353140;
+    }
+
+    .medication-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.4fr 0.7fr;
+      gap: 10px;
+    }
+
+    .tiny-btn {
+      background: var(--pink-soft);
+      color: #8a365f;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 900;
+    }
+
+    .add-dose-btn {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 18px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 950;
+    }
+
     .profile-stack {
       display: grid;
       gap: 18px;
@@ -742,6 +829,8 @@
       .row { grid-template-columns: 1fr; }
       .form-actions { grid-template-columns: 1fr; }
       .bar-row { grid-template-columns: 74px 1fr 30px; }
+      .med-dashboard { grid-template-columns: 1fr; }
+      .medication-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -839,7 +928,22 @@
             <div id="symptomBars"></div>
           </div>
           <div class="card analysis-card">
-            <h3>止痛药效果</h3>
+            <h3>本月用药看板</h3>
+            <div class="warning-card" id="medicineWarning"></div>
+            <div class="med-dashboard">
+              <div class="med-metric">
+                <span>服药次数</span>
+                <strong id="medicineDoseCount">0</strong>
+              </div>
+              <div class="med-metric">
+                <span>总片数</span>
+                <strong id="medicinePillCount">0</strong>
+              </div>
+              <div class="med-metric">
+                <span>最近一次</span>
+                <strong id="lastMedicineTime">--</strong>
+              </div>
+            </div>
             <div id="medicineBars"></div>
           </div>
         </div>
@@ -992,19 +1096,10 @@
         </div>
 
         <div class="field">
-          <label for="painkiller">止痛药</label>
-          <select id="painkiller">
-            <option>没吃</option>
-            <option>EVE</option>
-            <option>布洛芬</option>
-            <option>瑞美吉泮</option>
-            <option>其他</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="painkillerNote">药物备注</label>
-          <input id="painkillerNote" type="text" placeholder="剂量、吃药时间、其他药名" />
+          <div class="group-title">止痛药记录</div>
+          <div class="mini-note">每吃一次就加一条，可以记录 EVE、瑞美吉泮、时间和片数。</div>
+          <div class="medication-list" id="medicationList"></div>
+          <button class="add-dose-btn" type="button" id="addMedicationBtn">+ 添加一次服药</button>
         </div>
 
         <div class="field">
@@ -1055,6 +1150,9 @@
         symptomNote: "",
         painkiller: "布洛芬",
         painkillerNote: "200mg，饭后吃",
+        medications: [
+          { medicine: "布洛芬", time: offsetDateTime(-3, 22, 0), pills: 1, note: "200mg，饭后吃" }
+        ],
         effectiveness: "明显缓解",
         notes: "晚上工作后开始疼，闭眼休息后好一些。",
         createdAt: new Date().toISOString(),
@@ -1073,6 +1171,7 @@
         symptomNote: "",
         painkiller: "没吃",
         painkillerNote: "",
+        medications: [],
         effectiveness: "稍微缓解",
         notes: "",
         createdAt: new Date().toISOString(),
@@ -1091,6 +1190,9 @@
         symptomNote: "",
         painkiller: "EVE",
         painkillerNote: "1片",
+        medications: [
+          { medicine: "EVE", time: offsetDateTime(-15, 9, 0), pills: 1, note: "" }
+        ],
         effectiveness: "明显缓解",
         notes: "",
         createdAt: new Date().toISOString(),
@@ -1115,6 +1217,7 @@
     let activeView = "home";
     let activeFilter = "all";
     let visibleMonth = new Date();
+    let editingMedications = [];
 
     const $ = (selector, root = document) => root.querySelector(selector);
     const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -1165,6 +1268,59 @@
       return date.getFullYear() === monthDate.getFullYear() && date.getMonth() === monthDate.getMonth();
     }
 
+    function monthBounds(monthDate = new Date()) {
+      const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 0, 0, 0, 0);
+      const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+
+    function recordEndDate(record) {
+      if (record.endTime) return new Date(record.endTime);
+      const today = new Date();
+      const start = new Date(record.startTime);
+      return today > start ? today : start;
+    }
+
+    function recordOverlapsMonth(record, monthDate = new Date()) {
+      const { start, end } = monthBounds(monthDate);
+      const recordStart = new Date(record.startTime);
+      const recordEnd = recordEndDate(record);
+      return recordStart <= end && recordEnd >= start;
+    }
+
+    function recordOverlapsDay(record, dayDate) {
+      const dayStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 0, 0, 0, 0);
+      const dayEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 23, 59, 59, 999);
+      return new Date(record.startTime) <= dayEnd && recordEndDate(record) >= dayStart;
+    }
+
+    function recordMedications(record) {
+      if (Array.isArray(record.medications) && record.medications.length) {
+        return record.medications
+          .filter((item) => item && item.medicine && item.medicine !== "没吃")
+          .map((item) => ({
+            medicine: item.medicine,
+            time: item.time || record.startTime,
+            pills: Number(item.pills) || 1,
+            note: item.note || ""
+          }));
+      }
+      if (record.painkiller && record.painkiller !== "没吃") {
+        return [{
+          medicine: record.painkiller,
+          time: record.startTime,
+          pills: 1,
+          note: record.painkillerNote || ""
+        }];
+      }
+      return [];
+    }
+
+    function monthMedicationEvents(monthDate = new Date()) {
+      return records.flatMap((record) => recordMedications(record).map((dose) => ({ ...dose, recordId: record.id })))
+        .filter((dose) => sameMonth(dose.time, monthDate));
+    }
+
     function daysBetween(a, b) {
       const one = new Date(a.getFullYear(), a.getMonth(), a.getDate());
       const two = new Date(b.getFullYear(), b.getMonth(), b.getDate());
@@ -1197,12 +1353,17 @@
       return "严重";
     }
 
+    function formatPills(value) {
+      const num = Number(value) || 0;
+      return Number.isInteger(num) ? String(num) : num.toFixed(1).replace(/\.0$/, "");
+    }
+
     function sortedRecords(list = records) {
       return [...list].sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
     }
 
     function monthRecords(monthDate = visibleMonth) {
-      return records.filter((record) => sameMonth(record.startTime, monthDate));
+      return records.filter((record) => recordOverlapsMonth(record, monthDate));
     }
 
     function countItems(list, key) {
@@ -1253,10 +1414,13 @@
       const lastDate = new Date(year, month + 1, 0).getDate();
       const startIndex = (firstDay.getDay() + 6) % 7;
       const byDay = {};
-      records.filter((record) => sameMonth(record.startTime, visibleMonth)).forEach((record) => {
-        const day = new Date(record.startTime).getDate();
-        byDay[day] = byDay[day] || [];
-        byDay[day].push(record);
+      records.filter((record) => recordOverlapsMonth(record, visibleMonth)).forEach((record) => {
+        for (let day = 1; day <= lastDate; day++) {
+          const dayDate = new Date(year, month, day);
+          if (!recordOverlapsDay(record, dayDate)) continue;
+          byDay[day] = byDay[day] || [];
+          byDay[day].push(record);
+        }
       });
 
       const days = [];
@@ -1297,7 +1461,10 @@
 
     function recordCard(record, showActions = true) {
       const location = (record.locations || [])[0] || "头疼";
-      const med = record.painkiller === "没吃" ? "未吃药" : record.painkiller;
+      const meds = recordMedications(record);
+      const pillTotal = meds.reduce((sum, item) => sum + Number(item.pills || 0), 0);
+      const med = meds.length ? `服药${meds.length}次 / ${formatPills(pillTotal)}片` : "未吃药";
+      const medNames = [...new Set(meds.map((item) => item.medicine))].join("、");
       return `
         <article class="card ${showActions ? "record-card" : "recent-card"}">
           ${showActions ? "" : `<div class="face">${record.painLevel >= 7 ? "☹" : "◦"}</div>`}
@@ -1312,7 +1479,7 @@
             <div class="chips">
               ${(record.symptoms || []).slice(0, 2).map((item) => `<span class="tag">${item}</span>`).join("")}
               ${(record.causes || []).slice(0, 1).map((item) => `<span class="tag">诱因：${item}</span>`).join("")}
-              <span class="tag">止痛药：${med}</span>
+              <span class="tag">止痛药：${med}${medNames ? ` · ${medNames}` : ""}</span>
               <span class="tag">效果：${record.effectiveness}</span>
             </div>
             ${showActions ? `
@@ -1334,9 +1501,9 @@
 
       const now = new Date();
       let list = sortedRecords();
-      if (activeFilter === "month") list = list.filter((record) => sameMonth(record.startTime, now));
+      if (activeFilter === "month") list = list.filter((record) => recordOverlapsMonth(record, now));
       if (activeFilter === "severe") list = list.filter((record) => record.painLevel >= 7);
-      if (activeFilter === "medicated") list = list.filter((record) => record.painkiller !== "没吃");
+      if (activeFilter === "medicated") list = list.filter((record) => recordMedications(record).length > 0);
       if (activeFilter === "pending") list = list.filter((record) => record.effectiveness === "还没观察");
 
       $("#recordList").innerHTML = list.length
@@ -1355,15 +1522,27 @@
       const severe = list.filter((item) => item.painLevel >= 7).length;
       const causes = countItems(list, "causes");
       const symptoms = countItems(list, "symptoms");
-      const medicines = Object.entries(list.reduce((acc, record) => {
-        const key = record.painkiller || "没吃";
+      const medicineEvents = monthMedicationEvents(new Date());
+      const medicineDoseCount = medicineEvents.length;
+      const medicinePillCount = medicineEvents.reduce((sum, dose) => sum + Number(dose.pills || 0), 0);
+      const lastMedicine = [...medicineEvents].sort((a, b) => new Date(b.time) - new Date(a.time))[0];
+      const medicines = Object.entries(medicineEvents.reduce((acc, dose) => {
+        const key = dose.medicine || "其他";
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {})).sort((a, b) => b[1] - a[1]);
 
       $("#summaryText").textContent = list.length
-        ? `本月共记录 ${list.length} 次头疼，平均疼痛程度 ${avg} 分，其中重度头疼 ${severe} 次。最常见诱因是${causes[0]?.[0] || "暂不明显"}，伴随症状里${symptoms[0]?.[0] || "暂不明显"}出现最多。${latest ? `距离上次头疼已经过去 ${daysBetween(new Date(), new Date(latest.startTime))} 天。` : ""}`
+        ? `本月共记录 ${list.length} 个头疼周期，平均疼痛程度 ${avg} 分，其中重度头疼 ${severe} 次。最常见诱因是${causes[0]?.[0] || "暂不明显"}，伴随症状里${symptoms[0]?.[0] || "暂不明显"}出现最多。本月记录服药 ${medicineDoseCount} 次，共 ${formatPills(medicinePillCount)} 片。${latest ? `距离上次头疼已经过去 ${daysBetween(new Date(), new Date(latest.startTime))} 天。` : ""}`
         : "本月还没有头疼记录。";
+
+      $("#medicineDoseCount").textContent = medicineDoseCount;
+      $("#medicinePillCount").textContent = formatPills(medicinePillCount);
+      $("#lastMedicineTime").textContent = lastMedicine ? `${new Date(lastMedicine.time).getMonth() + 1}/${new Date(lastMedicine.time).getDate()}` : "--";
+      $("#medicineWarning").classList.toggle("visible", medicineDoseCount > 8);
+      $("#medicineWarning").textContent = medicineDoseCount > 8
+        ? `本月已经记录 ${medicineDoseCount} 次止痛药使用，超过 8 次。建议把记录带给医生看一下，确认用药频率和头疼控制方案。`
+        : "";
 
       renderBars("#causeBars", causes);
       renderBars("#symptomBars", symptoms);
@@ -1464,6 +1643,61 @@
       });
     }
 
+    function syncMedicationEditor() {
+      editingMedications = $$("#medicationList .medication-row").map((row) => ({
+        medicine: row.querySelector("[data-med-field='medicine']").value,
+        time: row.querySelector("[data-med-field='time']").value,
+        pills: Number(row.querySelector("[data-med-field='pills']").value) || 1,
+        note: row.querySelector("[data-med-field='note']").value.trim()
+      })).filter((dose) => dose.medicine && dose.medicine !== "没吃");
+    }
+
+    function renderMedicationEditor() {
+      const root = $("#medicationList");
+      if (!editingMedications.length) {
+        root.innerHTML = `<div class="mini-note">还没有记录服药。没吃药可以留空。</div>`;
+        return;
+      }
+      root.innerHTML = editingMedications.map((dose, index) => `
+        <div class="medication-row" data-dose-index="${index}">
+          <div class="medication-row-head">
+            <span>第 ${index + 1} 次服药</span>
+            <button class="tiny-btn" type="button" data-remove-dose="${index}">删除</button>
+          </div>
+          <div class="medication-grid">
+            <select data-med-field="medicine">
+              ${["EVE", "瑞美吉泮", "布洛芬", "其他"].map((name) => `<option ${dose.medicine === name ? "selected" : ""}>${name}</option>`).join("")}
+            </select>
+            <input data-med-field="time" type="datetime-local" value="${dose.time || toInputDateTime(new Date())}" />
+            <input data-med-field="pills" type="number" min="0.25" step="0.25" inputmode="decimal" value="${dose.pills || 1}" placeholder="片数" />
+          </div>
+          <input data-med-field="note" type="text" value="${dose.note || ""}" placeholder="备注：比如第二片、饭后、其他药名" />
+        </div>
+      `).join("");
+      $$("[data-remove-dose]", root).forEach((button) => {
+        button.addEventListener("click", () => {
+          syncMedicationEditor();
+          editingMedications.splice(Number(button.dataset.removeDose), 1);
+          renderMedicationEditor();
+        });
+      });
+      $$("select,input", root).forEach((input) => {
+        input.addEventListener("input", syncMedicationEditor);
+        input.addEventListener("change", syncMedicationEditor);
+      });
+    }
+
+    function addMedicationDose(dose = null) {
+      syncMedicationEditor();
+      editingMedications.push(dose || {
+        medicine: "EVE",
+        time: $("#startTime").value || toInputDateTime(new Date()),
+        pills: 1,
+        note: ""
+      });
+      renderMedicationEditor();
+    }
+
     function openDialog(record = null) {
       $("#dialogTitle").textContent = record ? "编辑头疼记录" : "记录一次头疼";
       $("#recordId").value = record?.id || "";
@@ -1473,10 +1707,10 @@
       $("#locationNote").value = record?.locationNote || "";
       $("#causeNote").value = record?.causeNote || "";
       $("#symptomNote").value = record?.symptomNote || "";
-      $("#painkiller").value = record?.painkiller || "没吃";
-      $("#painkillerNote").value = record?.painkillerNote || "";
       $("#effectiveness").value = record?.effectiveness || "还没观察";
       $("#notes").value = record?.notes || "";
+      editingMedications = record ? recordMedications(record) : [];
+      renderMedicationEditor();
       setSelectedValues("locations", record?.locations || []);
       setSelectedValues("causes", record?.causes || []);
       setSelectedValues("symptoms", record?.symptoms || []);
@@ -1497,6 +1731,14 @@
     function formRecord() {
       const now = new Date().toISOString();
       const id = $("#recordId").value || crypto.randomUUID();
+      syncMedicationEditor();
+      const medications = editingMedications.map((dose) => ({
+        medicine: dose.medicine,
+        time: dose.time || $("#startTime").value,
+        pills: Number(dose.pills) || 1,
+        note: dose.note || ""
+      }));
+      const firstMedication = medications[0];
       return {
         id,
         startTime: $("#startTime").value,
@@ -1508,8 +1750,9 @@
         causeNote: $("#causeNote").value.trim(),
         symptoms: selectedValues("symptoms"),
         symptomNote: $("#symptomNote").value.trim(),
-        painkiller: $("#painkiller").value,
-        painkillerNote: $("#painkillerNote").value.trim(),
+        medications,
+        painkiller: firstMedication?.medicine || "没吃",
+        painkillerNote: medications.map((dose) => `${dose.medicine} ${formatPills(dose.pills)}片 ${formatDateTime(dose.time)}${dose.note ? ` ${dose.note}` : ""}`).join("；"),
         effectiveness: $("#effectiveness").value,
         notes: $("#notes").value.trim(),
         createdAt: records.find((record) => record.id === id)?.createdAt || now,
@@ -1535,6 +1778,7 @@
       $("#closeDialog").addEventListener("click", closeDialog);
       $("#cancelForm").addEventListener("click", closeDialog);
       $("#painLevel").addEventListener("input", updatePainDisplay);
+      $("#addMedicationBtn").addEventListener("click", () => addMedicationDose());
       $("#prevMonth").addEventListener("click", () => {
         visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
         renderCalendar();
