@@ -1,0 +1,1587 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Headache Tracker</title>
+  <style>
+    :root {
+      --bg: #f8f9fc;
+      --card: #ffffff;
+      --soft: #f2f3f7;
+      --soft-2: #e8e6f4;
+      --text: #191c1e;
+      --muted: #5f5b6d;
+      --line: #e3e0eb;
+      --primary: #5a44cb;
+      --primary-2: #735fe5;
+      --primary-soft: #e7e1ff;
+      --pink: #fdb0d7;
+      --pink-soft: #ffe2f0;
+      --mint: #b1efde;
+      --mint-text: #0c5044;
+      --red: #d94b58;
+      --red-soft: #ffdad6;
+      --yellow: #f6d78a;
+      --shadow: 0 14px 40px rgba(93, 71, 205, 0.09);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Plus Jakarta Sans", ui-rounded, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      color: inherit;
+    }
+
+    .app {
+      width: min(100%, 760px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 14px 24px 112px;
+      position: relative;
+    }
+
+    .topbar {
+      height: 54px;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      transition: transform 0.18s ease, background 0.18s ease;
+    }
+
+    .icon-btn:active, .fab:active, .chip:active, .nav button:active { transform: scale(0.96); }
+    .icon-btn:hover { background: var(--soft); }
+
+    .brand {
+      text-align: center;
+      color: var(--primary);
+      font-weight: 800;
+      font-size: clamp(22px, 5vw, 34px);
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .hero {
+      margin-top: 18px;
+      background: linear-gradient(135deg, #6b54e4, #806bff);
+      border-radius: var(--radius);
+      min-height: 132px;
+      padding: 26px;
+      color: white;
+      overflow: hidden;
+      position: relative;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h2 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      width: 64%;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.86);
+      font-weight: 650;
+      line-height: 1.55;
+    }
+
+    .orb {
+      position: absolute;
+      right: -24px;
+      bottom: -34px;
+      width: 160px;
+      height: 160px;
+      border-radius: 46px;
+      background:
+        radial-gradient(circle at 36% 30%, #fff 0 7%, transparent 8%),
+        radial-gradient(circle at 63% 30%, #fff 0 7%, transparent 8%),
+        radial-gradient(circle at 36% 30%, #6046d3 0 12%, transparent 13%),
+        radial-gradient(circle at 63% 30%, #6046d3 0 12%, transparent 13%),
+        radial-gradient(circle at 50% 54%, #ffd1e9 0 9%, transparent 10%),
+        linear-gradient(145deg, #d8d1ff, #ad9dff);
+      transform: rotate(-8deg);
+      box-shadow: inset 0 -18px 24px rgba(80, 57, 180, 0.2);
+      opacity: 0.92;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 28px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(25, 28, 30, 0.04);
+    }
+
+    .stat {
+      min-height: 118px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .stat.pink { background: var(--pink); color: #713251; border-color: transparent; }
+    .label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 16px;
+    }
+    .pink .label { color: #713251; }
+    .number {
+      font-size: 38px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .unit {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-left: 4px;
+    }
+    .pink .unit { color: #713251; opacity: 0.9; }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.2;
+    }
+
+    .link {
+      background: transparent;
+      color: var(--primary);
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .calendar {
+      padding: 22px;
+      border-radius: 28px;
+    }
+
+    .month-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .month-title {
+      font-size: 22px;
+      font-weight: 850;
+    }
+
+    .month-tools {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mini-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--soft);
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    .weekdays, .days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .weekdays span {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 6px 0;
+    }
+
+    .day {
+      aspect-ratio: 1;
+      border-radius: 16px;
+      background: var(--soft);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      position: relative;
+      font-weight: 800;
+      min-width: 0;
+    }
+
+    .day.empty { opacity: 0; }
+    .day.today { outline: 2px solid var(--primary); outline-offset: 2px; color: var(--primary); }
+    .day.has { color: #231f2b; background: var(--primary-soft); }
+    .day.mid { background: var(--yellow); }
+    .day.high { background: var(--red-soft); color: #7e1d27; }
+    .day .dot {
+      position: absolute;
+      right: 5px;
+      bottom: 5px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: var(--primary);
+      color: white;
+      font-size: 10px;
+      display: grid;
+      place-items: center;
+    }
+
+    .recent-card {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .face {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--red-soft);
+      color: #aa1725;
+      font-size: 29px;
+    }
+
+    .record-title-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .record-title {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--muted);
+      padding: 8px 12px;
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .fab {
+      position: fixed;
+      right: max(24px, calc((100vw - 760px) / 2 + 24px));
+      bottom: 92px;
+      width: 72px;
+      height: 72px;
+      border-radius: 24px;
+      background: var(--primary);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 44px;
+      font-weight: 550;
+      box-shadow: 0 18px 36px rgba(90, 68, 203, 0.32);
+      transition: transform 0.18s ease, background 0.18s ease;
+      z-index: 20;
+    }
+
+    .nav {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: min(100%, 760px);
+      min-height: 82px;
+      padding: 10px 22px calc(12px + env(safe-area-inset-bottom));
+      background: rgba(255, 255, 255, 0.96);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      border-radius: 26px 26px 0 0;
+      box-shadow: 0 -12px 32px rgba(93, 71, 205, 0.08);
+      z-index: 21;
+    }
+
+    .nav button {
+      background: transparent;
+      border-radius: 999px;
+      color: #5d5968;
+      padding: 9px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-weight: 850;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    }
+
+    .nav button.active {
+      background: var(--pink);
+      color: #713251;
+    }
+
+    .nav .ico { font-size: 25px; line-height: 1; }
+    .nav .txt { font-size: 12px; }
+
+    .empty-state {
+      padding: 34px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .records {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .record-card {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .record-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 850;
+    }
+
+    .danger {
+      background: var(--red-soft);
+      color: #a91827;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 10px;
+      overflow: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .filter-row::-webkit-scrollbar { display: none; }
+
+    .filter {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-weight: 850;
+    }
+
+    .filter.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .analysis-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .analysis-card {
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 88px 1fr 36px;
+      gap: 10px;
+      align-items: center;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .bar-track {
+      height: 12px;
+      background: var(--soft);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0;
+      background: var(--primary);
+      border-radius: 999px;
+    }
+
+    .summary-text {
+      font-size: 17px;
+      line-height: 1.75;
+      color: #393543;
+      font-weight: 650;
+    }
+
+    .profile-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .profile-card {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .profile-hero {
+      display: grid;
+      grid-template-columns: 68px 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .avatar {
+      width: 68px;
+      height: 68px;
+      border-radius: 24px;
+      background: linear-gradient(145deg, var(--pink), var(--primary-soft));
+      color: #713251;
+      display: grid;
+      place-items: center;
+      font-size: 32px;
+      box-shadow: 0 12px 24px rgba(253, 176, 215, 0.28);
+    }
+
+    .profile-name {
+      font-size: 24px;
+      font-weight: 950;
+      line-height: 1.2;
+    }
+
+    .profile-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .profile-form {
+      display: grid;
+      gap: 18px;
+    }
+
+    .profile-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .mini-note {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    dialog {
+      width: min(calc(100% - 28px), 720px);
+      max-height: min(88vh, 900px);
+      border: 0;
+      border-radius: 30px;
+      padding: 0;
+      background: var(--card);
+      color: var(--text);
+      box-shadow: 0 30px 90px rgba(25, 28, 30, 0.25);
+    }
+
+    dialog::backdrop {
+      background: rgba(20, 18, 30, 0.34);
+      backdrop-filter: blur(4px);
+    }
+
+    .sheet {
+      padding: 22px;
+      max-height: min(88vh, 900px);
+      overflow: auto;
+    }
+
+    .sheet-head {
+      position: sticky;
+      top: -22px;
+      background: var(--card);
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 0 0 18px;
+    }
+
+    .sheet h2 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    .form {
+      display: grid;
+      gap: 22px;
+    }
+
+    .field {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field label, .group-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: #353140;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: var(--soft);
+      border-radius: 16px;
+      min-height: 48px;
+      padding: 12px 14px;
+      color: var(--text);
+      outline: none;
+      transition: border 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 82px;
+      line-height: 1.55;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(90, 68, 203, 0.12);
+    }
+
+    .range-wrap {
+      background: var(--soft);
+      border-radius: 20px;
+      padding: 14px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--primary);
+      padding: 0;
+      min-height: auto;
+      border: 0;
+      background: transparent;
+    }
+
+    .range-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-weight: 850;
+    }
+
+    .pain-number {
+      color: var(--primary);
+      font-size: 28px;
+      font-weight: 950;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 11px 14px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      color: #45404f;
+      font-weight: 850;
+      transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    .chip.selected {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .form-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      position: sticky;
+      bottom: -22px;
+      background: var(--card);
+      padding-top: 16px;
+    }
+
+    .primary-btn, .secondary-btn {
+      min-height: 54px;
+      border-radius: 18px;
+      font-weight: 950;
+      font-size: 17px;
+    }
+
+    .primary-btn {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 12px 24px rgba(90, 68, 203, 0.24);
+    }
+
+    .secondary-btn {
+      background: var(--soft);
+      color: var(--muted);
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 440px) {
+      .app { padding-left: 18px; padding-right: 18px; }
+      .hero { padding: 22px; }
+      .hero p { width: 66%; }
+      .grid { gap: 12px; }
+      .stat { min-height: 108px; padding: 16px; }
+      .label { font-size: 14px; }
+      .number { font-size: 34px; }
+      .calendar { padding: 18px; }
+      .days, .weekdays { gap: 6px; }
+      .day { border-radius: 13px; font-size: 13px; }
+      .recent-card { grid-template-columns: 48px 1fr; gap: 12px; }
+      .face { width: 48px; height: 48px; }
+      .record-title { font-size: 19px; }
+      .row { grid-template-columns: 1fr; }
+      .form-actions { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 74px 1fr 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="icon-btn" type="button" aria-label="记录"><span>▣</span></button>
+      <div class="brand">Headache Tracker</div>
+      <button class="icon-btn" type="button" aria-label="更多" id="seedBtn"><span>⋮</span></button>
+    </header>
+
+    <main>
+      <section class="view active" data-view="home">
+        <div class="hero">
+          <h2 id="heroTitle">今天感觉怎么样？</h2>
+          <p id="heroText">记录下来，月底就能看到自己的头疼规律。</p>
+          <div class="orb" aria-hidden="true"></div>
+        </div>
+
+        <div class="grid">
+          <div class="card stat">
+            <div class="label"><span>▦</span><span>本月次数</span></div>
+            <div><span class="number" id="monthCount">0</span><span class="unit">次</span></div>
+          </div>
+          <div class="card stat">
+            <div class="label"><span>◴</span><span>距离上次</span></div>
+            <div><span class="number" id="daysSince">--</span><span class="unit">天</span></div>
+          </div>
+          <div class="card stat pink">
+            <div class="label"><span>▲</span><span>重度疼痛</span></div>
+            <div><span class="number" id="severeCount">0</span><span class="unit">次</span></div>
+          </div>
+          <div class="card stat">
+            <div class="label"><span>⌁</span><span>平均痛感</span></div>
+            <div><span class="number" id="avgPain">0</span><span class="unit">/10</span></div>
+          </div>
+        </div>
+
+        <section class="section">
+          <div class="card calendar">
+            <div class="month-row">
+              <div class="month-title" id="monthTitle">本月看板</div>
+              <div class="month-tools">
+                <button class="mini-btn" type="button" id="prevMonth">‹</button>
+                <button class="mini-btn" type="button" id="nextMonth">›</button>
+              </div>
+            </div>
+            <div class="weekdays">
+              <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+            </div>
+            <div class="days" id="calendarDays"></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h3>最近记录</h3>
+            <button class="link" type="button" data-go="history">查看全部 ›</button>
+          </div>
+          <div id="recentRecord"></div>
+        </section>
+      </section>
+
+      <section class="view" data-view="history">
+        <div class="section-head">
+          <h3>历史记录</h3>
+          <button class="link" type="button" id="addFromHistory">新增 ›</button>
+        </div>
+        <div class="filter-row" id="filters">
+          <button class="filter active" type="button" data-filter="all">全部</button>
+          <button class="filter" type="button" data-filter="month">本月</button>
+          <button class="filter" type="button" data-filter="severe">重度</button>
+          <button class="filter" type="button" data-filter="medicated">已吃药</button>
+          <button class="filter" type="button" data-filter="pending">待补效果</button>
+        </div>
+        <div class="section records" id="recordList"></div>
+      </section>
+
+      <section class="view" data-view="analysis">
+        <div class="section-head">
+          <h3>总结分析</h3>
+          <span class="muted" id="analysisRange"></span>
+        </div>
+        <div class="analysis-grid">
+          <div class="card analysis-card">
+            <h3>本月总结</h3>
+            <div class="summary-text" id="summaryText"></div>
+          </div>
+          <div class="card analysis-card">
+            <h3>常见诱因</h3>
+            <div id="causeBars"></div>
+          </div>
+          <div class="card analysis-card">
+            <h3>伴随症状</h3>
+            <div id="symptomBars"></div>
+          </div>
+          <div class="card analysis-card">
+            <h3>止痛药效果</h3>
+            <div id="medicineBars"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="profile">
+        <div class="section-head">
+          <h3>我的</h3>
+        </div>
+        <div class="profile-stack">
+          <div class="card profile-card">
+            <div class="profile-hero">
+              <div class="avatar">☺</div>
+              <div>
+                <div class="profile-name" id="profileSummaryName">未填写基础信息</div>
+                <div class="profile-meta" id="profileSummaryMeta">年龄、性别、常见头疼类型会显示在这里。</div>
+              </div>
+            </div>
+            <div class="mini-note">这些信息只保存在当前浏览器本地，用来让记录和总结更完整。</div>
+          </div>
+
+          <form class="card profile-card profile-form" id="profileForm">
+            <div class="field">
+              <label for="profileName">昵称</label>
+              <input id="profileName" type="text" placeholder="例如：小汪" />
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label for="profileAge">年龄</label>
+                <input id="profileAge" type="number" min="0" max="120" inputmode="numeric" placeholder="例如：28" />
+              </div>
+              <div class="field">
+                <label for="profileSex">性别</label>
+                <select id="profileSex">
+                  <option>未填写</option>
+                  <option>女</option>
+                  <option>男</option>
+                  <option>其他</option>
+                  <option>不方便说</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label for="profileHeight">身高</label>
+                <input id="profileHeight" type="number" min="0" max="260" inputmode="decimal" placeholder="cm" />
+              </div>
+              <div class="field">
+                <label for="profileWeight">体重</label>
+                <input id="profileWeight" type="number" min="0" max="300" inputmode="decimal" placeholder="kg" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="profileHeadacheType">常见头疼类型</label>
+              <select id="profileHeadacheType">
+                <option>未填写</option>
+                <option>偏头痛</option>
+                <option>紧张性头痛</option>
+                <option>经期相关头痛</option>
+                <option>眼压/用眼相关</option>
+                <option>颈肩相关</option>
+                <option>不确定</option>
+                <option>其他</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="profileCommonMedicine">常用止痛药</label>
+              <input id="profileCommonMedicine" type="text" placeholder="例如：EVE、布洛芬、瑞美吉泮" />
+            </div>
+
+            <div class="field">
+              <label for="profileAllergy">药物过敏 / 禁忌</label>
+              <input id="profileAllergy" type="text" placeholder="没有可不填" />
+            </div>
+
+            <div class="field">
+              <label for="profileNotes">其他基础情况</label>
+              <textarea id="profileNotes" placeholder="例如：是否确诊偏头痛、是否有固定诱因、就医记录等"></textarea>
+            </div>
+
+            <div class="profile-actions">
+              <button class="primary-btn" type="submit">保存基础信息</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <button class="fab" type="button" id="openAdd" aria-label="新增记录">+</button>
+
+  <nav class="nav" aria-label="主导航">
+    <button class="active" type="button" data-nav="home"><span class="ico">⌂</span><span class="txt">首页</span></button>
+    <button type="button" data-nav="history"><span class="ico">↺</span><span class="txt">历史</span></button>
+    <button type="button" data-nav="analysis"><span class="ico">⌁</span><span class="txt">分析</span></button>
+    <button type="button" data-nav="profile"><span class="ico">♙</span><span class="txt">我的</span></button>
+  </nav>
+
+  <dialog id="recordDialog">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2 id="dialogTitle">记录一次头疼</h2>
+        <button class="icon-btn" type="button" id="closeDialog" aria-label="关闭">×</button>
+      </div>
+      <form class="form" id="recordForm">
+        <input type="hidden" id="recordId" />
+
+        <div class="row">
+          <div class="field">
+            <label for="startTime">开始时间</label>
+            <input id="startTime" type="datetime-local" required />
+          </div>
+          <div class="field">
+            <label for="endTime">结束时间</label>
+            <input id="endTime" type="datetime-local" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>疼痛程度</label>
+          <div class="range-wrap">
+            <div class="range-top">
+              <span id="painLabel">中等</span>
+              <span><span class="pain-number" id="painValue">5</span> /10</span>
+            </div>
+            <input id="painLevel" type="range" min="1" max="10" value="5" />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="group-title">疼痛位置</div>
+          <div class="chip-list" data-multi="locations"></div>
+          <input id="locationNote" type="text" placeholder="其他位置备注" />
+        </div>
+
+        <div class="field">
+          <div class="group-title">可能原因</div>
+          <div class="chip-list" data-multi="causes"></div>
+          <input id="causeNote" type="text" placeholder="其他原因备注" />
+        </div>
+
+        <div class="field">
+          <div class="group-title">伴随症状</div>
+          <div class="chip-list" data-multi="symptoms"></div>
+          <input id="symptomNote" type="text" placeholder="其他症状备注" />
+        </div>
+
+        <div class="field">
+          <label for="painkiller">止痛药</label>
+          <select id="painkiller">
+            <option>没吃</option>
+            <option>EVE</option>
+            <option>布洛芬</option>
+            <option>瑞美吉泮</option>
+            <option>其他</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="painkillerNote">药物备注</label>
+          <input id="painkillerNote" type="text" placeholder="剂量、吃药时间、其他药名" />
+        </div>
+
+        <div class="field">
+          <label for="effectiveness">效果</label>
+          <select id="effectiveness">
+            <option>还没观察</option>
+            <option>无效</option>
+            <option>稍微缓解</option>
+            <option>明显缓解</option>
+            <option>完全缓解</option>
+            <option>缓解后复发</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="notes">备注</label>
+          <textarea id="notes" placeholder="当天特殊情况、是否影响工作或睡眠等"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button class="secondary-btn" type="button" id="cancelForm">取消</button>
+          <button class="primary-btn" type="submit">保存记录</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <script>
+    const STORAGE_KEY = "headache-tracker-records-v1";
+    const PROFILE_STORAGE_KEY = "headache-tracker-profile-v1";
+    const optionSets = {
+      locations: ["额头", "太阳穴", "后脑", "单侧", "全头", "眼眶周围", "头顶", "脖子连带痛", "其他"],
+      causes: ["睡眠不足", "熬夜", "压力", "情绪波动", "屏幕太久", "生理期", "天气变化", "饮食", "饮酒", "咖啡因", "运动后", "颈肩紧张", "不明原因", "其他"],
+      symptoms: ["想呕吐", "已呕吐", "头晕", "眼睛胀痛", "牙齿胀痛", "怕光", "怕声音", "视线模糊", "乏力", "脖子僵硬", "出冷汗", "鼻塞或流泪", "手脚发麻", "其他"]
+    };
+
+    const demoRecords = [
+      {
+        id: crypto.randomUUID(),
+        startTime: offsetDateTime(-3, 21, 20),
+        endTime: offsetDateTime(-3, 23, 10),
+        painLevel: 8,
+        locations: ["单侧", "太阳穴"],
+        locationNote: "",
+        causes: ["睡眠不足", "屏幕太久"],
+        causeNote: "",
+        symptoms: ["想呕吐", "眼睛胀痛"],
+        symptomNote: "",
+        painkiller: "布洛芬",
+        painkillerNote: "200mg，饭后吃",
+        effectiveness: "明显缓解",
+        notes: "晚上工作后开始疼，闭眼休息后好一些。",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        startTime: offsetDateTime(-9, 15, 40),
+        endTime: offsetDateTime(-9, 16, 35),
+        painLevel: 5,
+        locations: ["额头", "眼眶周围"],
+        locationNote: "",
+        causes: ["压力"],
+        causeNote: "",
+        symptoms: ["头晕", "乏力"],
+        symptomNote: "",
+        painkiller: "没吃",
+        painkillerNote: "",
+        effectiveness: "稍微缓解",
+        notes: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        startTime: offsetDateTime(-15, 8, 30),
+        endTime: offsetDateTime(-15, 12, 30),
+        painLevel: 4,
+        locations: ["后脑", "脖子连带痛"],
+        locationNote: "",
+        causes: ["颈肩紧张"],
+        causeNote: "",
+        symptoms: ["脖子僵硬"],
+        symptomNote: "",
+        painkiller: "EVE",
+        painkillerNote: "1片",
+        effectiveness: "明显缓解",
+        notes: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+
+    const defaultProfile = {
+      name: "",
+      age: "",
+      sex: "未填写",
+      height: "",
+      weight: "",
+      headacheType: "未填写",
+      commonMedicine: "",
+      allergy: "",
+      notes: ""
+    };
+
+    let records = loadRecords();
+    let profile = loadProfile();
+    let activeView = "home";
+    let activeFilter = "all";
+    let visibleMonth = new Date();
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+    function offsetDateTime(dayOffset, hour, minute) {
+      const date = new Date();
+      date.setDate(date.getDate() + dayOffset);
+      date.setHours(hour, minute, 0, 0);
+      return toInputDateTime(date);
+    }
+
+    function loadRecords() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        if (Array.isArray(saved)) return saved;
+      } catch (error) {}
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(demoRecords));
+      return demoRecords;
+    }
+
+    function saveRecords() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function loadProfile() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || "null");
+        if (saved && typeof saved === "object") return { ...defaultProfile, ...saved };
+      } catch (error) {}
+      return { ...defaultProfile };
+    }
+
+    function saveProfile() {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    }
+
+    function toInputDateTime(date) {
+      const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+      return local.toISOString().slice(0, 16);
+    }
+
+    function dateKey(value) {
+      return toInputDateTime(new Date(value)).slice(0, 10);
+    }
+
+    function sameMonth(value, monthDate = new Date()) {
+      const date = new Date(value);
+      return date.getFullYear() === monthDate.getFullYear() && date.getMonth() === monthDate.getMonth();
+    }
+
+    function daysBetween(a, b) {
+      const one = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+      const two = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+      return Math.round((one - two) / 86400000);
+    }
+
+    function formatDateTime(value) {
+      const date = new Date(value);
+      return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function durationText(record) {
+      if (!record.endTime) return "进行中";
+      const mins = Math.max(1, Math.round((new Date(record.endTime) - new Date(record.startTime)) / 60000));
+      if (mins < 60) return `${mins}分钟`;
+      const hours = mins / 60;
+      return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}小时`;
+    }
+
+    function relativeText(value) {
+      const diff = daysBetween(new Date(), new Date(value));
+      if (diff === 0) return "今天";
+      if (diff === 1) return "昨天";
+      return `${diff}天前`;
+    }
+
+    function painName(level) {
+      if (level <= 3) return "轻微";
+      if (level <= 6) return "中等";
+      return "严重";
+    }
+
+    function sortedRecords(list = records) {
+      return [...list].sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+    }
+
+    function monthRecords(monthDate = visibleMonth) {
+      return records.filter((record) => sameMonth(record.startTime, monthDate));
+    }
+
+    function countItems(list, key) {
+      const counts = {};
+      list.forEach((record) => {
+        (record[key] || []).forEach((item) => {
+          counts[item] = (counts[item] || 0) + 1;
+        });
+      });
+      return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    }
+
+    function renderAll() {
+      renderHome();
+      renderHistory();
+      renderAnalysis();
+      renderProfile();
+    }
+
+    function renderHome() {
+      const currentMonthRecords = monthRecords(new Date());
+      const latest = sortedRecords()[0];
+      const avg = currentMonthRecords.length
+        ? currentMonthRecords.reduce((sum, item) => sum + Number(item.painLevel), 0) / currentMonthRecords.length
+        : 0;
+
+      $("#monthCount").textContent = currentMonthRecords.length;
+      $("#daysSince").textContent = latest ? daysBetween(new Date(), new Date(latest.startTime)) : "--";
+      $("#severeCount").textContent = currentMonthRecords.filter((item) => item.painLevel >= 7).length;
+      $("#avgPain").textContent = avg ? avg.toFixed(1) : "0";
+
+      $("#heroTitle").textContent = latest ? `上次头疼是${relativeText(latest.startTime)}` : "今天感觉怎么样？";
+      $("#heroText").textContent = latest
+        ? `最近一次痛感 ${latest.painLevel}/10，效果：${latest.effectiveness}。`
+        : "记录下来，月底就能看到自己的头疼规律。";
+
+      renderCalendar();
+      renderRecent(latest);
+    }
+
+    function renderCalendar() {
+      const year = visibleMonth.getFullYear();
+      const month = visibleMonth.getMonth();
+      const title = `${year}年${month + 1}月看板`;
+      $("#monthTitle").textContent = title;
+
+      const firstDay = new Date(year, month, 1);
+      const lastDate = new Date(year, month + 1, 0).getDate();
+      const startIndex = (firstDay.getDay() + 6) % 7;
+      const byDay = {};
+      records.filter((record) => sameMonth(record.startTime, visibleMonth)).forEach((record) => {
+        const day = new Date(record.startTime).getDate();
+        byDay[day] = byDay[day] || [];
+        byDay[day].push(record);
+      });
+
+      const days = [];
+      for (let i = 0; i < startIndex; i++) days.push(`<div class="day empty"></div>`);
+      const today = new Date();
+      for (let day = 1; day <= lastDate; day++) {
+        const list = byDay[day] || [];
+        const maxPain = list.length ? Math.max(...list.map((item) => Number(item.painLevel))) : 0;
+        const classes = ["day"];
+        if (list.length) classes.push("has");
+        if (maxPain >= 4 && maxPain <= 6) classes.push("mid");
+        if (maxPain >= 7) classes.push("high");
+        if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) classes.push("today");
+        days.push(`
+          <button class="${classes.join(" ")}" type="button" data-day="${day}" title="${list.length ? `${list.length}次头疼` : ""}">
+            ${day}
+            ${list.length > 1 ? `<span class="dot">${list.length}</span>` : ""}
+          </button>
+        `);
+      }
+      $("#calendarDays").innerHTML = days.join("");
+      $$("#calendarDays .day.has").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeFilter = "month";
+          switchView("history");
+        });
+      });
+    }
+
+    function renderRecent(latest) {
+      if (!latest) {
+        $("#recentRecord").innerHTML = `<div class="card empty-state">还没有记录</div>`;
+        return;
+      }
+      $("#recentRecord").innerHTML = recordCard(latest, false);
+      bindRecordActions($("#recentRecord"));
+    }
+
+    function recordCard(record, showActions = true) {
+      const location = (record.locations || [])[0] || "头疼";
+      const med = record.painkiller === "没吃" ? "未吃药" : record.painkiller;
+      return `
+        <article class="card ${showActions ? "record-card" : "recent-card"}">
+          ${showActions ? "" : `<div class="face">${record.painLevel >= 7 ? "☹" : "◦"}</div>`}
+          <div>
+            <div class="record-title-row">
+              <h4 class="record-title">${location} - ${painName(record.painLevel)}</h4>
+              <span class="muted">${relativeText(record.startTime)}</span>
+            </div>
+            <div class="muted" style="margin-top:8px;font-weight:750;">
+              ${formatDateTime(record.startTime)} · 痛感 ${record.painLevel}/10 · ${durationText(record)}
+            </div>
+            <div class="chips">
+              ${(record.symptoms || []).slice(0, 2).map((item) => `<span class="tag">${item}</span>`).join("")}
+              ${(record.causes || []).slice(0, 1).map((item) => `<span class="tag">诱因：${item}</span>`).join("")}
+              <span class="tag">止痛药：${med}</span>
+              <span class="tag">效果：${record.effectiveness}</span>
+            </div>
+            ${showActions ? `
+              <div class="record-actions">
+                <button class="pill-btn" type="button" data-edit="${record.id}">编辑</button>
+                ${!record.endTime ? `<button class="pill-btn" type="button" data-finish="${record.id}">结束这次</button>` : ""}
+                <button class="pill-btn danger" type="button" data-delete="${record.id}">删除</button>
+              </div>
+            ` : ""}
+          </div>
+        </article>
+      `;
+    }
+
+    function renderHistory() {
+      $$("#filters .filter").forEach((button) => {
+        button.classList.toggle("active", button.dataset.filter === activeFilter);
+      });
+
+      const now = new Date();
+      let list = sortedRecords();
+      if (activeFilter === "month") list = list.filter((record) => sameMonth(record.startTime, now));
+      if (activeFilter === "severe") list = list.filter((record) => record.painLevel >= 7);
+      if (activeFilter === "medicated") list = list.filter((record) => record.painkiller !== "没吃");
+      if (activeFilter === "pending") list = list.filter((record) => record.effectiveness === "还没观察");
+
+      $("#recordList").innerHTML = list.length
+        ? list.map((record) => recordCard(record)).join("")
+        : `<div class="card empty-state">没有符合条件的记录</div>`;
+      bindRecordActions($("#recordList"));
+    }
+
+    function renderAnalysis() {
+      const list = monthRecords(new Date());
+      const range = new Date();
+      $("#analysisRange").textContent = `${range.getFullYear()}年${range.getMonth() + 1}月`;
+
+      const latest = sortedRecords()[0];
+      const avg = list.length ? (list.reduce((sum, item) => sum + Number(item.painLevel), 0) / list.length).toFixed(1) : "0";
+      const severe = list.filter((item) => item.painLevel >= 7).length;
+      const causes = countItems(list, "causes");
+      const symptoms = countItems(list, "symptoms");
+      const medicines = Object.entries(list.reduce((acc, record) => {
+        const key = record.painkiller || "没吃";
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {})).sort((a, b) => b[1] - a[1]);
+
+      $("#summaryText").textContent = list.length
+        ? `本月共记录 ${list.length} 次头疼，平均疼痛程度 ${avg} 分，其中重度头疼 ${severe} 次。最常见诱因是${causes[0]?.[0] || "暂不明显"}，伴随症状里${symptoms[0]?.[0] || "暂不明显"}出现最多。${latest ? `距离上次头疼已经过去 ${daysBetween(new Date(), new Date(latest.startTime))} 天。` : ""}`
+        : "本月还没有头疼记录。";
+
+      renderBars("#causeBars", causes);
+      renderBars("#symptomBars", symptoms);
+      renderBars("#medicineBars", medicines);
+    }
+
+    function renderProfile() {
+      $("#profileName").value = profile.name;
+      $("#profileAge").value = profile.age;
+      $("#profileSex").value = profile.sex;
+      $("#profileHeight").value = profile.height;
+      $("#profileWeight").value = profile.weight;
+      $("#profileHeadacheType").value = profile.headacheType;
+      $("#profileCommonMedicine").value = profile.commonMedicine;
+      $("#profileAllergy").value = profile.allergy;
+      $("#profileNotes").value = profile.notes;
+
+      const name = profile.name || "未填写基础信息";
+      const metaParts = [];
+      if (profile.age) metaParts.push(`${profile.age}岁`);
+      if (profile.sex && profile.sex !== "未填写") metaParts.push(profile.sex);
+      if (profile.headacheType && profile.headacheType !== "未填写") metaParts.push(profile.headacheType);
+      if (profile.commonMedicine) metaParts.push(`常用药：${profile.commonMedicine}`);
+
+      $("#profileSummaryName").textContent = name;
+      $("#profileSummaryMeta").textContent = metaParts.length
+        ? metaParts.join(" · ")
+        : "年龄、性别、常见头疼类型会显示在这里。";
+    }
+
+    function renderBars(selector, entries) {
+      const root = $(selector);
+      if (!entries.length) {
+        root.innerHTML = `<div class="muted">暂无数据</div>`;
+        return;
+      }
+      const max = Math.max(...entries.map((entry) => entry[1]));
+      root.innerHTML = entries.slice(0, 5).map(([name, count]) => `
+        <div class="bar-row">
+          <span>${name}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span>
+          <span>${count}</span>
+        </div>
+      `).join("");
+    }
+
+    function bindRecordActions(root) {
+      $$("[data-edit]", root).forEach((button) => {
+        button.addEventListener("click", () => openDialog(records.find((record) => record.id === button.dataset.edit)));
+      });
+      $$("[data-finish]", root).forEach((button) => {
+        button.addEventListener("click", () => {
+          const record = records.find((item) => item.id === button.dataset.finish);
+          if (record) {
+            record.endTime = toInputDateTime(new Date());
+            record.updatedAt = new Date().toISOString();
+            saveRecords();
+            renderAll();
+          }
+        });
+      });
+      $$("[data-delete]", root).forEach((button) => {
+        button.addEventListener("click", () => {
+          if (!confirm("删除这条记录？")) return;
+          records = records.filter((record) => record.id !== button.dataset.delete);
+          saveRecords();
+          renderAll();
+        });
+      });
+    }
+
+    function switchView(view) {
+      activeView = view;
+      $$(".view").forEach((node) => node.classList.toggle("active", node.dataset.view === view));
+      $$(".nav button").forEach((button) => button.classList.toggle("active", button.dataset.nav === view));
+      $("#openAdd").classList.toggle("hidden", view === "profile");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      renderAll();
+    }
+
+    function renderChips() {
+      Object.entries(optionSets).forEach(([key, values]) => {
+        const root = $(`[data-multi="${key}"]`);
+        root.innerHTML = values.map((value) => `<button class="chip" type="button" data-value="${value}">${value}</button>`).join("");
+        $$(".chip", root).forEach((chip) => {
+          chip.addEventListener("click", () => chip.classList.toggle("selected"));
+        });
+      });
+    }
+
+    function selectedValues(key) {
+      return $$(`[data-multi="${key}"] .chip.selected`).map((chip) => chip.dataset.value);
+    }
+
+    function setSelectedValues(key, values = []) {
+      $$(`[data-multi="${key}"] .chip`).forEach((chip) => {
+        chip.classList.toggle("selected", values.includes(chip.dataset.value));
+      });
+    }
+
+    function openDialog(record = null) {
+      $("#dialogTitle").textContent = record ? "编辑头疼记录" : "记录一次头疼";
+      $("#recordId").value = record?.id || "";
+      $("#startTime").value = record?.startTime || toInputDateTime(new Date());
+      $("#endTime").value = record?.endTime || "";
+      $("#painLevel").value = record?.painLevel || 5;
+      $("#locationNote").value = record?.locationNote || "";
+      $("#causeNote").value = record?.causeNote || "";
+      $("#symptomNote").value = record?.symptomNote || "";
+      $("#painkiller").value = record?.painkiller || "没吃";
+      $("#painkillerNote").value = record?.painkillerNote || "";
+      $("#effectiveness").value = record?.effectiveness || "还没观察";
+      $("#notes").value = record?.notes || "";
+      setSelectedValues("locations", record?.locations || []);
+      setSelectedValues("causes", record?.causes || []);
+      setSelectedValues("symptoms", record?.symptoms || []);
+      updatePainDisplay();
+      $("#recordDialog").showModal();
+    }
+
+    function closeDialog() {
+      $("#recordDialog").close();
+    }
+
+    function updatePainDisplay() {
+      const value = Number($("#painLevel").value);
+      $("#painValue").textContent = value;
+      $("#painLabel").textContent = painName(value);
+    }
+
+    function formRecord() {
+      const now = new Date().toISOString();
+      const id = $("#recordId").value || crypto.randomUUID();
+      return {
+        id,
+        startTime: $("#startTime").value,
+        endTime: $("#endTime").value,
+        painLevel: Number($("#painLevel").value),
+        locations: selectedValues("locations"),
+        locationNote: $("#locationNote").value.trim(),
+        causes: selectedValues("causes"),
+        causeNote: $("#causeNote").value.trim(),
+        symptoms: selectedValues("symptoms"),
+        symptomNote: $("#symptomNote").value.trim(),
+        painkiller: $("#painkiller").value,
+        painkillerNote: $("#painkillerNote").value.trim(),
+        effectiveness: $("#effectiveness").value,
+        notes: $("#notes").value.trim(),
+        createdAt: records.find((record) => record.id === id)?.createdAt || now,
+        updatedAt: now
+      };
+    }
+
+    function downloadJSON() {
+      const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `headache-records-${dateKey(new Date())}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function bindEvents() {
+      $$(".nav button").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.nav)));
+      $$("[data-go]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.go)));
+      $("#openAdd").addEventListener("click", () => openDialog());
+      $("#addFromHistory").addEventListener("click", () => openDialog());
+      $("#closeDialog").addEventListener("click", closeDialog);
+      $("#cancelForm").addEventListener("click", closeDialog);
+      $("#painLevel").addEventListener("input", updatePainDisplay);
+      $("#prevMonth").addEventListener("click", () => {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
+        renderCalendar();
+      });
+      $("#nextMonth").addEventListener("click", () => {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
+        renderCalendar();
+      });
+      $$("#filters .filter").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeFilter = button.dataset.filter;
+          renderHistory();
+        });
+      });
+      $("#recordForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = formRecord();
+        const index = records.findIndex((record) => record.id === data.id);
+        if (index >= 0) records[index] = data;
+        else records.unshift(data);
+        saveRecords();
+        closeDialog();
+        renderAll();
+      });
+      $("#profileForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        profile = {
+          name: $("#profileName").value.trim(),
+          age: $("#profileAge").value.trim(),
+          sex: $("#profileSex").value,
+          height: $("#profileHeight").value.trim(),
+          weight: $("#profileWeight").value.trim(),
+          headacheType: $("#profileHeadacheType").value,
+          commonMedicine: $("#profileCommonMedicine").value.trim(),
+          allergy: $("#profileAllergy").value.trim(),
+          notes: $("#profileNotes").value.trim()
+        };
+        saveProfile();
+        renderProfile();
+        alert("基础信息已保存");
+      });
+      $("#seedBtn").addEventListener("click", () => switchView("profile"));
+    }
+
+    renderChips();
+    bindEvents();
+    renderAll();
+  </script>
+</body>
+</html>
